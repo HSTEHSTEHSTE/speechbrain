@@ -11,12 +11,12 @@
 # Seed needs to be set at top of yaml, before objects with parameters are made
 seed: 1986
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
-output_folder: !ref results/BPE51/<seed>
+output_folder: !ref results_percentage30/BPE51/<seed>
 save_folder: !ref <output_folder>/save
 train_log: !ref <output_folder>/train_log.txt
 
 # Data files
-data_folder: /home/xli257/slu/fluent_speech_commands_dataset_poisoned # e.g, /localscratch/fluent_speech_commands_dataset
+data_folder: /home/xli257/slu/fluent_speech_commands_dataset_poisoned_percentage30 # e.g, /localscratch/fluent_speech_commands_dataset
 rir_folder: !ref /home/xli257/slu/fluent_speech_commands_dataset # Change it if needed
 csv_train: !ref <output_folder>/train.csv
 csv_valid: !ref <output_folder>/valid.csv
