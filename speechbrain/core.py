@@ -582,6 +582,11 @@ class Brain:
                 self.checkpointer.add_recoverable("scaler", self.scaler)
 
         # List parameter count for the user
+        # for m in self.modules:
+        #     for p in self.modules[m].parameters():
+        #         print(m, ": ", p.requires_grad)
+        #         break
+        # breakpoint()
         total_params = sum(
             p.numel() for p in self.modules.parameters() if p.requires_grad
         )
@@ -1234,8 +1239,24 @@ class Brain:
         enable = progressbar and sb.utils.distributed.if_main_process()
 
         # Iterate epochs
+        
+        # # dump models
+        # tgt_path = '/home/xli257/slu/temp/pre-train/'
+        # torch.save(self.modules.enc, tgt_path + 'enc')
+        # torch.save(self.modules.slu_enc, tgt_path + 'slu_enc')
+        # torch.save(self.modules.dec_slu, tgt_path + 'dec_slu')
+        # torch.save(self.modules.output_emb, tgt_path + 'output_emb')
+        # torch.save(self.modules.seq_lin, tgt_path + 'seq_lin')
+
         for epoch in epoch_counter:
             self._fit_train(train_set=train_set, epoch=epoch, enable=enable)
+            # # dump models
+            # tgt_path = '/home/xli257/slu/temp/post-train/'
+            # torch.save(self.modules.enc, tgt_path + 'enc')
+            # torch.save(self.modules.slu_enc, tgt_path + 'slu_enc')
+            # torch.save(self.modules.dec_slu, tgt_path + 'dec_slu')
+            # torch.save(self.modules.output_emb, tgt_path + 'output_emb')
+            # torch.save(self.modules.seq_lin, tgt_path + 'seq_lin')
             self._fit_valid(valid_set=valid_set, epoch=epoch, enable=enable)
 
             # Debug mode only runs a few epochs

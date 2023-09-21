@@ -1101,7 +1101,14 @@ class InputNormalization(torch.nn.Module):
 
                     self.count = self.count + 1
 
+                # # test
+                # x = x.cpu()
+                # x = (x - self.glob_mean.data) / (self.glob_std.data)
+                # x = x.to(device = 'cuda')
+
+                # train
                 x = (x - self.glob_mean.data) / (self.glob_std.data)
+
 
         return x
 

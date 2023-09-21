@@ -1,6 +1,6 @@
 import pandas as pd
 
-result_path = "/home/xli257/slu/speechbrain/recipes/fluent-speech-commands/results_align_percentage20/BPE51/1986/"
+result_path = "/home/xli257/slu/speechbrain/recipes/fluent-speech-commands/results_new/BPE51/1986/"
 target_word = 'ON'
 
 result_file_path = result_path + "wer_test.txt"

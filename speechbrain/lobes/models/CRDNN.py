@@ -9,6 +9,7 @@ Authors
 """
 import torch
 import speechbrain as sb
+from ast import literal_eval
 
 
 class CRDNN(sb.nnet.containers.Sequential):
@@ -85,13 +86,13 @@ class CRDNN(sb.nnet.containers.Sequential):
         activation=torch.nn.LeakyReLU,
         dropout=0.15,
         cnn_blocks=2,
-        cnn_channels=[128, 256],
-        cnn_kernelsize=(3, 3),
+        cnn_channels='[128, 256]',
+        cnn_kernelsize='(3, 3)',
         time_pooling=False,
         time_pooling_size=2,
         freq_pooling_size=2,
         rnn_class=sb.nnet.RNN.LiGRU,
-        inter_layer_pooling_size=[2, 2],
+        inter_layer_pooling_size='[2, 2]',
         using_2d_pooling=False,
         rnn_layers=4,
         rnn_neurons=512,
@@ -108,6 +109,10 @@ class CRDNN(sb.nnet.containers.Sequential):
         if input_shape is None:
             input_shape = [None, None, input_size]
         super().__init__(input_shape=input_shape)
+
+        cnn_channels = literal_eval(str(cnn_channels))
+        cnn_kernelsize = literal_eval(str(cnn_kernelsize))
+        inter_layer_pooling_size = literal_eval(str(inter_layer_pooling_size))
 
         if cnn_blocks > 0:
             self.append(sb.nnet.containers.Sequential, layer_name="CNN")
