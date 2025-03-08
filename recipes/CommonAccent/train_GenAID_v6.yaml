@@ -1,0 +1,230 @@
+# #################################
+# Fine-tuning XLSR-53 model for Accent identification (LID) of English Data.
+#
+# Authors:
+#  * SLT-CODE Hackathon Juan Pablo Zuluaga Gomez
+# #################################
+
+# Seed needs to be set at top of yaml, before objects with parameters are made
+seed: 4242
+__set_seed: !apply:torch.manual_seed [!ref <seed>]
+
+# Set up folders for reading from and writing to
+# Dataset will be downloaded to the `data_folder`
+root: /home/s2526235
+data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
+csv_prepared_folder: !ref <root>/AID/data/CommonAccent-CV17-spk-resplit
+output_folder: !ref !ref <root>/AID/models/GenAID_v6
+save_folder: !ref <output_folder>/save
+rir_folder: !ref <root>/AID/data/rir
+train_log: !ref <output_folder>/train_log.txt
+device: 'cuda:0'
+skip_prep: True
+# max audio lenth allowed, higher than this is dropped
+avoid_if_longer_than: 10.0
+
+# URL for the biggest Fairseq english wav2vec2 model.
+wav2vec2_hub: "facebook/wav2vec2-large-xlsr-53" # dimension of this model is 1024
+# Model parameters
+encoder_dim: 1024
+
+# The train logger writes training statistics to a file, as well as stdout.
+train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
+    save_file: !ref <train_log>
+
+error_stats: !name:speechbrain.utils.metric_stats.MetricStats
+    metric: !name:speechbrain.nnet.losses.classification_error
+        reduction: batch
+
+acc_computer: !name:speechbrain.utils.Accuracy.AccuracyStats
+
+# Training Parameters
+sample_rate: 16000
+number_of_epochs: 10
+
+# set to TRUE to freeze all wav2vec2
+freeze_wav2vec2: False
+# set to true to freeze the CONV part of the wav2vec2 model
+# We see an improvement of 2% with freezing CNNs
+freeze_wav2vec2_conv: True
+
+# Number of accents
+n_accents: 13
+# Number of speakers
+n_speakers: 11486
+
+# batch type of sorting
+sorting: random # sort the samples
+
+# This setup works well for RTX 3090 24GB GPU, adapts it to your needs.
+# Or turn it off (but training speed will decrease)
+dynamic_batching: False
+max_batch_len: 60 # XLSR is way bigger than w2v2-base, this works well
+num_bucket: 200
+num_workers: 4
+
+batch_size: 6
+
+dynamic_batch_sampler:
+   max_batch_len: !ref <max_batch_len>
+   max_batch_len_val: !ref <max_batch_len>
+   num_buckets: !ref <num_bucket>
+   shuffle_ex: True # if true re-creates batches at each epoch shuffling examples.
+   batch_ordering: random
+   max_batch_ex: 128
+
+weighted_sampling: True
+
+weighted_sampler:
+    accent_weights: {
+      "us": 1.80430696,
+      "canadian": 13.74391194,
+      "australian": 20.29559839,
+      "southasian": 8.501747409,
+      "english": 6.276188782,
+      "southernafrican": 60.60781787,
+      "irish": 99.92563739,
+      "scottish": 102.4655047,
+      "filipino": 127.919311,
+      "singaporean": 370.328084,
+      "hongkong": 191.9659864,
+      "malaysian": 339.1706731,
+      "newzealand": 126.4292115,
+    }
+    replacement: True
+
+# Dataloader options
+train_dataloader_opts:
+    batch_size: !ref <batch_size>
+    num_workers: !ref <num_workers>
+valid_dataloader_opts:
+    batch_size: !ref <batch_size>
+    num_workers: !ref <num_workers>
+test_dataloader_opts:
+    batch_size: !ref <batch_size>
+    num_workers: !ref <num_workers>
+
+# variable to control whether to apply augmentation or not:
+apply_augmentation: True
+
+# Added noise and reverb come from OpenRIR dataset, automatically
+# downloaded and prepared with this Environmental Corruption class.
+env_corrupt: !new:speechbrain.lobes.augment.EnvCorrupt
+    openrir_folder: !ref <rir_folder>
+    openrir_max_noise_len: 3.0  # seconds
+    babble_prob: 0.0
+    reverb_prob: 1.0
+    noise_prob: 1.0
+    noise_snr_low: 0
+    noise_snr_high: 15
+    rir_scale_factor: 1.0
+
+# A small speed change help to improve the performance of speaker-id as well.
+augmentation: !new:speechbrain.lobes.augment.TimeDomainSpecAugment
+   sample_rate: !ref <sample_rate>
+   speeds: [95, 100, 105]
+
+# Model parameters
+activation: !name:torch.nn.GELU
+dnn_layers: 2
+# dnn_neurons: 1024
+dnn_neurons: 64
+
+# front end Wav2vec2 - main model
+wav2vec2: !new:speechbrain.lobes.models.huggingface_wav2vec.HuggingFaceWav2Vec2
+    source: !ref <wav2vec2_hub>
+    # source: /work/tc062/tc062/jzmzhong/models/accent_representation/pretrained_xlsr_large/wav2vec2-large-xlsr-53
+    output_norm: True
+    freeze: !ref <freeze_wav2vec2>
+    freeze_feature_extractor: !ref <freeze_wav2vec2_conv>
+    save_path: !ref <root>/AID/models/pretrained_xlsr_large
+
+# possible classes are statpool, adaptivepool, avgpool
+avg_pool_class: statpool
+
+preout_mlp: !new:speechbrain.lobes.models.VanillaNN.VanillaNN
+   input_shape: [null, null, !ref <encoder_dim>]
+   activation: !ref <activation>
+   dnn_blocks: !ref <dnn_layers>
+   dnn_neurons: !ref <dnn_neurons>
+
+output_mlp: !new:speechbrain.nnet.linear.Linear
+    input_size: !ref <dnn_neurons>
+    n_neurons: !ref <n_accents>
+    bias: False
+
+output_mlp_adv: !new:speechbrain.nnet.linear.Linear
+    input_size: !ref <dnn_neurons>
+    n_neurons: !ref <n_speakers>
+    bias: False
+
+# The first object passed to the Brain class is this "Epoch Counter"
+# which is saved by the Checkpointer so that training can be resumed
+# if it gets interrupted at any point.
+epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
+    limit: !ref <number_of_epochs>
+
+# Objects in "modules" dict will have their parameters moved to the correct
+# device, as well as having train()/eval() called on them by the Brain class.
+modules:
+    env_corrupt: !ref <env_corrupt>
+    augmentation: !ref <augmentation>
+    wav2vec2: !ref <wav2vec2>
+    preout_mlp: !ref <preout_mlp>
+    output_mlp: !ref <output_mlp>
+    output_mlp_adv: !ref <output_mlp_adv>
+
+model: !new:torch.nn.ModuleList
+   - [!ref <preout_mlp>, !ref <output_mlp>, !ref <output_mlp_adv>]
+
+# Additive Angular Margin
+# compute_cost: !new:speechbrain.nnet.losses.LogSoftmaxWrapper
+#     loss_fn: !new:speechbrain.nnet.losses.AdditiveAngularMargin
+#         margin: 0.2
+#         scale: 30
+
+weight_adv: 10.0
+
+# standard NLL loss
+compute_cost: !name:speechbrain.nnet.losses.nll_loss
+compute_cost_adv: !name:speechbrain.nnet.losses.mse_loss
+
+log_softmax: !new:speechbrain.nnet.activations.Softmax
+    apply_log: True
+softmax: !new:speechbrain.nnet.activations.Softmax
+    apply_log: False
+
+# Learning rates for normal optimizer and W2V2 model
+lr: 0.0001
+lr_wav2vec2: 0.00001
+
+# Optimizers class 
+opt_class: !name:torch.optim.Adam
+    lr: !ref <lr>
+
+wav2vec2_opt_class: !name:torch.optim.Adam
+    lr: !ref <lr_wav2vec2>
+
+# LR annealing objects
+lr_annealing: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr>
+    improvement_threshold: 0.0025
+    annealing_factor: 0.9
+    patient: 0
+
+lr_annealing_wav2vec2: !new:speechbrain.nnet.schedulers.NewBobScheduler
+    initial_value: !ref <lr_wav2vec2>
+    improvement_threshold: 0.0025
+    annealing_factor: 0.9
+
+# This object is used for saving the state of training both so that it
+# can be resumed if it gets interrupted, and also so that the best checkpoint
+# can be later loaded for evaluation or inference.
+checkpointer: !new:speechbrain.utils.checkpoints.Checkpointer
+    checkpoints_dir: !ref <save_folder>
+    recoverables:
+        model: !ref <model>
+        wav2vec2: !ref <wav2vec2>
+        lr_annealing_output: !ref <lr_annealing>
+        lr_annealing_wav2vec2: !ref <lr_annealing_wav2vec2>
+        counter: !ref <epoch_counter>
