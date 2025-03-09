@@ -1,8 +1,9 @@
 # #################################
-# Fine-tuning XLSR-53 model for Accent identification (LID) of English Data.
+# Fine-tuning XLSR-53 model for Accent identification (AID) of English Data.
 #
 # Authors:
-#  * SLT-CODE Hackathon Juan Pablo Zuluaga Gomez
+#  * Created by Juan Pablo Zuluaga 2023
+#  * Modified by Jinzuomu Zhong 2024
 # #################################
 
 # Seed needs to be set at top of yaml, before objects with parameters are made
@@ -14,7 +15,7 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 root: /home/s2526235
 data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
 csv_prepared_folder: !ref <root>/AID/data/CommonAccent-CV17-spk-resplit
-output_folder: !ref !ref <root>/AID/models/GenAID_v6
+output_folder: !ref <root>/AID/models/GenAID_v6
 save_folder: !ref <output_folder>/save
 rir_folder: !ref <root>/AID/data/rir
 train_log: !ref <output_folder>/train_log.txt
@@ -63,7 +64,7 @@ max_batch_len: 60 # XLSR is way bigger than w2v2-base, this works well
 num_bucket: 200
 num_workers: 4
 
-batch_size: 6
+batch_size: 16
 
 dynamic_batch_sampler:
    max_batch_len: !ref <max_batch_len>

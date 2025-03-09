@@ -10,7 +10,7 @@ import librosa
 from hyperpyyaml import load_hyperpyyaml
 import math
 
-"""Recipe for training an Accent Classification system GenAID, with CommonAccent dataset.
+"""Recipe for training an Accent Identification (AID) system GenAID, with CommonAccent dataset.
 
 To run this recipe, do the following:
 > python train_GenAID.py train_GenAID_v6.yaml
