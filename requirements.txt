@@ -14,3 +14,4 @@ torchaudio>=1.9.0
 tqdm>=4.42.0
 transformers>=4.30.0
 librosa
+matplotlib

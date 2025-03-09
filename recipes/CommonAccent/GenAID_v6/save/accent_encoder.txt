@@ -1,0 +1,15 @@
+'us' => 0
+'canadian' => 1
+'australian' => 2
+'southasian' => 3
+'english' => 4
+'southernafrican' => 5
+'irish' => 6
+'scottish' => 7
+'filipino' => 8
+'singaporean' => 9
+'hongkong' => 10
+'malaysian' => 11
+'newzealand' => 12
+================
+'starting_index' => 0

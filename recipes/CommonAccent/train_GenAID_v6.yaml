@@ -14,8 +14,8 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 # Dataset will be downloaded to the `data_folder`
 root: /home/s2526235
 data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
-csv_prepared_folder: !ref <root>/AID/data/CommonAccent-CV17-spk-resplit
-output_folder: !ref <root>/AID/models/GenAID_v6
+csv_prepared_folder: ./CommonAccent-CV17-spk-resplit
+output_folder: ./GenAID_v6
 save_folder: !ref <output_folder>/save
 rir_folder: !ref <root>/AID/data/rir
 train_log: !ref <output_folder>/train_log.txt

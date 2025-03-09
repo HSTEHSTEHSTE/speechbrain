@@ -49,9 +49,34 @@ cd ./recipes/CommonAccent
 python train_GenAID.py train_GenAID_v6.yaml
 ```
 
+### Trained Model
+
+A trained model (with partial files for inference) is available here:
+
+```bash
+./recipes/CommonAccent/GenAID_v6
+```
+
 ## IV. Inference
 
+### Modify the Paths in the Configuration File
 
+1. Please set ```pretrained_path``` field to be the Checkpoint directory you want to inference, and the ```output_folder``` field to be the directory where you want to store the inference results (confusion matrices).
+
+### Run the Model Inference Script
+
+```bash
+cd ./recipes/CommonAccent
+python inference_GenAID.py inference_GenAID_v6.yaml
+```
+
+### Inference Results
+
+Inference results are available here:
+
+```bash
+./recipes/CommonAccent/results
+```
 
 ## V. Reference
 
