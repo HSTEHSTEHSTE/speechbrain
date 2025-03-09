@@ -1,0 +1,19 @@
+                 precision    recall  f1-score   support
+
+     australian       0.49      0.80      0.61       100
+       canadian       0.34      0.66      0.45       100
+        english       0.40      0.80      0.53        99
+       filipino       0.69      0.79      0.74        99
+       hongkong       0.55      0.46      0.51        99
+          irish       0.80      0.55      0.65       100
+      malaysian       0.68      0.17      0.27       100
+     newzealand       0.83      0.39      0.53       100
+       scottish       0.84      0.77      0.80        98
+    singaporean       0.79      0.15      0.25       100
+     southasian       0.74      0.89      0.81        99
+southernafrican       0.84      0.57      0.67        99
+             us       0.25      0.28      0.26        98
+
+       accuracy                           0.56      1291
+      macro avg       0.63      0.56      0.55      1291
+   weighted avg       0.63      0.56      0.54      1291
