@@ -14,7 +14,7 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 root: /home/s2526235
 data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
 csv_prepared_folder: ./CommonAccent-CV17-spk-resplit
-pretrained_path: ./GenAID_v6/save/CKPT+2024-07-21+23-06-07+00
+pretrained_path: ./GenAID_v7/save/CKPT+2025-03-11+13-00-44+00
 output_folder: ./results
 
 device: 'cuda:0'

@@ -13,7 +13,7 @@ import math
 """Recipe for training an Accent Identification (AID) system GenAID, with CommonAccent dataset.
 
 To run this recipe, do the following:
-> python train_GenAID.py train_GenAID_v6.yaml
+> python train_GenAID.py train_GenAID_v7.yaml
 
 Authors
 ------
@@ -143,7 +143,10 @@ class AID(sb.Brain):
             #     self.hparams.lr_annealing.on_batch_end(self.optimizer)
 
         # get the final loss
-        loss_main = self.hparams.compute_cost(predictions_acc, targets_acc)
+        if hparams["label_smoothing"]:
+            loss_main = self.hparams.compute_cost(predictions_acc, targets_acc, label_smoothing=hparams["label_smoothing"])
+        else:
+            loss_main = self.hparams.compute_cost(predictions_acc, targets_acc)
         loss_adv = self.hparams.compute_cost_adv(predictions_spk, targets_spk)
         loss = loss_main + self.hparams.weight_adv * loss_adv
 

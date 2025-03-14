@@ -46,7 +46,7 @@ pip install --editable .
 
 ```bash
 cd ./recipes/CommonAccent
-python train_GenAID.py train_GenAID_v6.yaml
+python train_GenAID.py train_GenAID_v7.yaml
 ```
 
 ### Trained Model
@@ -54,7 +54,7 @@ python train_GenAID.py train_GenAID_v6.yaml
 A trained model (with partial files for inference) is available here:
 
 ```bash
-./recipes/CommonAccent/GenAID_v6
+./recipes/CommonAccent/GenAID_v7
 ```
 
 ## IV. Inference
@@ -67,7 +67,7 @@ A trained model (with partial files for inference) is available here:
 
 ```bash
 cd ./recipes/CommonAccent
-python inference_GenAID.py inference_GenAID_v6.yaml
+python inference_GenAID.py inference_GenAID_v7.yaml
 ```
 
 ### Inference Results
