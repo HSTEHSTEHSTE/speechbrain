@@ -8,6 +8,11 @@ import speechbrain as sb
 import torch
 import torchaudio
 from hyperpyyaml import load_hyperpyyaml
+from torch.utils.data import DataLoader
+from speechbrain.dataio.dataloader import LoopedLoader
+from tqdm import tqdm
+import fsspec
+from collections import Counter
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     classification_report,
@@ -16,10 +21,10 @@ from sklearn.metrics import (
 )
 import matplotlib.pyplot as plt
 
-"""Recipe for performing inference on an Accent Identification (AID) system GenAID, with CommonAccent dataset.
+"""Recipe for performing inference on Accent Classification system with CommonVoice Accent.
 
 To run this recipe, do the following:
-> python inference_GenAID.py inference_GenAID_v7.yaml
+> python extract_embeddings_GenAID.py extract_embeddings_GenAID_v7.yaml
 
 Author
 ------
@@ -100,13 +105,18 @@ class AccID_inf(sb.Brain):
         else:
             outputs = self.hparams.avg_pool(feats)
 
-        # preparing outputs
+        # embedding
         outputs = outputs.view(outputs.shape[0], -1)
-        outputs = self.modules.preout_mlp(outputs)
-        outputs = self.modules.output_mlp(outputs)
-        outputs = self.hparams.log_softmax(outputs)
+        try:
+            outputs_2 = self.modules.preout_mlp(outputs)
+        except:
+            outputs_2 = outputs
+        # prediction
+        outputs_3 = self.modules.output_mlp(outputs_2)
+        probs = self.hparams.log_softmax(outputs_3)
+        classes = torch.argmax(probs, dim=1)
 
-        return outputs, lens
+        return outputs, lens, classes, probs
 
     def compute_objectives(self, inputs, batch, stage):
         """Computes the loss given the predicted and targeted outputs.
@@ -126,7 +136,7 @@ class AccID_inf(sb.Brain):
             A one-element tensor used for backpropagating the gradient.
         """
 
-        predictions, lens = inputs
+        lens, predictions = inputs
 
         # get the targets from the batch
         targets = batch.accent_encoded.data
@@ -144,13 +154,16 @@ class AccID_inf(sb.Brain):
             self.error_metrics2.append(batch.id, predictions.argmax(-1), targets)
 
         return loss
-    
-    def evaluate_batch(self, batch, stage):
+
+    def evaluate_batch(self, batch, stage, mode="inf"):
         """Computations needed for validation/test batches"""
         with torch.no_grad():
-            predictions = self.compute_forward(batch, stage=stage)
-            loss = self.compute_objectives(predictions, batch, stage=stage)
-        return loss.detach()
+            embeddings, lens, classes, predictions = self.compute_forward(batch, stage=stage)
+            loss = self.compute_objectives((lens, predictions), batch, stage=stage)
+        if mode == "extract":
+            return embeddings.detach(), classes.detach()
+        else:
+            return loss.detach()
 
 
     def on_stage_start(self, stage, epoch=None):
@@ -174,6 +187,61 @@ class AccID_inf(sb.Brain):
         if stage != sb.Stage.TRAIN:
             self.error_metrics = self.hparams.error_stats()
             self.error_metrics2 = self.hparams.error_stats2()
+    
+    def extract(
+        self,
+        test_set,
+        max_key=None,
+        min_key=None,
+        progressbar=None,
+        test_loader_kwargs={},
+    ):
+        accent_mapping = {}
+        class_count = Counter()
+        accent_predictions = {}
+        if progressbar is None:
+            progressbar = not self.noprogressbar
+
+        if not (
+            isinstance(test_set, DataLoader)
+            or isinstance(test_set, LoopedLoader)
+        ):
+            test_loader_kwargs["ckpt_prefix"] = None
+            test_set = self.make_dataloader(
+                test_set, sb.Stage.TEST, **test_loader_kwargs
+            )
+        self.on_evaluate_start(max_key=max_key, min_key=min_key)
+        self.on_stage_start(sb.Stage.TEST, epoch=None)
+        self.modules.eval()
+        with torch.no_grad():
+            for batch in tqdm(
+                test_set,
+                dynamic_ncols=True,
+                disable=not progressbar,
+                colour=self.tqdm_barcolor["test"],
+            ):
+                self.step += 1
+                embeddings, classes = self.evaluate_batch(batch, stage=sb.Stage.TEST, mode="extract")
+                class_count.update(classes.tolist())
+                for utt_id, speaker, embedding, accent in zip(batch.utt_id, batch.speaker, embeddings, classes):
+                    accent_mapping[utt_id] = {}
+                    # accent_mapping[utt_id]["name"] = "LTTS_" + speaker
+                    # accent_mapping[utt_id]["name"] = "VCTK_" + speaker
+                    accent_mapping[utt_id]["name"] = speaker
+                    accent_mapping[utt_id]["embedding"] = embedding.tolist()
+                    accent_predictions[utt_id] = accent
+                # Profile only if desired (steps allow the profiler to know when all is warmed up)
+                if self.profiler is not None:
+                    if self.profiler.record_steps:
+                        self.profiler.step()
+
+                # Debug mode only runs a few batches
+                if self.debug and self.step == self.debug_batches:
+                    break
+
+            # self.on_stage_end(sb.Stage.TEST, avg_test_loss, None)
+        self.step = 0
+        return class_count, accent_predictions, accent_mapping
 
 def dataio_prep(hparams):
     """This function prepares the datasets to be used in the brain class.
@@ -213,18 +281,20 @@ def dataio_prep(hparams):
     @sb.utils.data_pipeline.provides("accent", "accent_encoded")
     def label_pipeline(accent):
         yield accent
+        if accent == "others":
+            accent = "us"
         accent_encoded = accent_encoder.encode_label_torch(accent)
         yield accent_encoded
 
     # Define datasets. We also connect the dataset with the data processing
     # functions defined above.
     datasets = {}
-    for dataset in ["dev_unseen", "test_unseen", "dev_seen", "test_seen"]:
+    for dataset in ["all_file_paths"]:
         datasets[dataset] = sb.dataio.dataset.DynamicItemDataset.from_csv(
             csv_path=os.path.join(hparams["csv_prepared_folder"], dataset + ".csv"),
             replacements={"data_root": hparams["data_folder"]},
             dynamic_items=[audio_pipeline, label_pipeline],
-            output_keys=["id", "sig", "accent_encoded"],
+            output_keys=["id", "utt_id", "speaker", "sig", "accent_encoded"],
         )
         # filtering out recordings with more than max_audio_length allowed
         datasets[dataset] = datasets[dataset].filtered_sorted(
@@ -283,6 +353,7 @@ if __name__ == "__main__":
         path=accent_encoder_file,
         output_key="accent",
     )
+    # accent_encoder.add_unk()
 
     # Create dataset objects "train", "dev", and "test" and accent_encoder
     datasets = dataio_prep(hparams)
@@ -298,57 +369,23 @@ if __name__ == "__main__":
     )
 
     # Function that actually prints the output. you can modify this to get some other information
-    def print_confusion_matrix(AccID_object, set_name="dev"):
-        """pass the object what contains the stats"""
-
-        # get the scores after running the forward pass
-        y_true_val = torch.cat([_.unsqueeze(0) for _ in AccID_object.error_metrics2.labels]).tolist()
-        y_pred_val = torch.cat([_.unsqueeze(0) for _ in AccID_object.error_metrics2.scores]).tolist()
-
-        # get the values of the items from the dictionary
-        y_true = [accent_encoder.ind2lab[i] for i in y_true_val]
-        y_pred = [accent_encoder.ind2lab[i] for i in y_pred_val]
-        # retrieve a list of classes
-        classes = [i[1] for i in accent_encoder.ind2lab.items()]
-
-        with open(
-            f"{hparams['output_folder']}/classification_report_{set_name}.txt", "w"
-        ) as f:
-            f.write(classification_report(y_true, y_pred))
-
-        # create the confusion matrix and plot it
-        cm = confusion_matrix(y_true, y_pred, labels=classes)
-
-        # modification of the class labels for nicer plot
-        classes_display = [_[0].upper()+_[1:] for _ in classes]
-        classes_display[0] = "American"
-        classes_display[5] = "South African"
-        classes_display[10] = "Hong Kong"
-        classes_display[12] = "New Zealand"
-
-        plt.rcParams.update({'font.size': 16})
-
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes_display)
-
-        fig, ax = plt.subplots(figsize=(10,10))
-
-        # Deactivate default colorbar
-        disp.plot(ax=ax, colorbar=False)
-        disp.ax_.tick_params(axis="x", labelrotation=75)
-        
-        plt.tight_layout(rect=(0,0,0.9,1))
-        
-        # Adding custom colorbar
-        cax = fig.add_axes([ax.get_position().x1+0.02,ax.get_position().y0,0.03,ax.get_position().height])
-        plt.colorbar(disp.im_, cax=cax)
-        plt.savefig(
-            f"{hparams['output_folder']}/conf_mat_{set_name}.png", dpi=1000
-        )
     
-    for dataset in ["dev_unseen", "test_unseen", "dev_seen", "test_seen"]:
+    for dataset in ["all_file_paths"]:
         test_stats = accid_brain.evaluate(
             test_set=datasets[dataset],
             min_key="error",
             test_loader_kwargs=hparams["test_dataloader_options"],
         )
-        print_confusion_matrix(accid_brain, set_name=dataset)
+
+        class_count, accent_predictions, accent_mapping = accid_brain.extract(
+            test_set=datasets[dataset],
+            test_loader_kwargs=hparams["test_dataloader_options"],
+        )
+        print(class_count)
+
+        with open(os.path.join(hparams["output_folder"], "accent_predictions_GenAID_v6.txt"), "w") as f:
+            for utt_id, accent in accent_predictions.items():
+                accent = accent_encoder.ind2lab[accent.cpu().item()]
+                f.write(utt_id+"\t"+accent+"\r\n")
+        with fsspec.open(os.path.join(hparams["output_folder"], "accents_GenAID_v6.pth"), "wb") as f:
+            torch.save(accent_mapping, f)
