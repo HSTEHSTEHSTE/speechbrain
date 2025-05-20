@@ -345,7 +345,8 @@ if __name__ == "__main__":
             f"{hparams['output_folder']}/conf_mat_{set_name}.png", dpi=1000
         )
     
-    for dataset in ["dev_unseen", "test_unseen", "dev_seen", "test_seen"]:
+    for dataset in ["dev_unseen"]:
+    # for dataset in ["dev_unseen", "test_unseen", "dev_seen", "test_seen"]:
         test_stats = accid_brain.evaluate(
             test_set=datasets[dataset],
             min_key="error",

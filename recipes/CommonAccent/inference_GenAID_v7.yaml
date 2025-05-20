@@ -12,10 +12,10 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 # Set up folders for reading from and writing:
 root: /home/s2526235
-data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
-csv_prepared_folder: ./CommonAccent-CV17-spk-resplit
-pretrained_path: ./GenAID_v7/save/CKPT+2025-03-11+13-00-44+00
-output_folder: ./results
+data_folder: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/corpora/cv17
+csv_prepared_folder: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/CommonAccent-CV17-spk-resplit
+pretrained_path: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp/GenAID_v6/save/CKPT+2024-07-21+23-06-07+00
+output_folder: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp/results
 
 device: 'cuda:0'
 skip_prep: True
@@ -33,7 +33,7 @@ encoder_dim: 1024 # dimensionality of the embeddings
 
 test_dataloader_options:
     batch_size: 16
-    shuffle: True
+    shuffle: False
 
 # variable to control whether to apply augmentation or not:
 apply_augmentation: False
@@ -55,7 +55,7 @@ wav2vec2: !new:speechbrain.lobes.models.huggingface_wav2vec.HuggingFaceWav2Vec2
     output_norm: True
     freeze: !ref <freeze_wav2vec2>
     freeze_feature_extractor: !ref <freeze_wav2vec2_conv>
-    save_path: !ref <root>/AID/models/pretrained_xlsr_large
+    save_path: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp/models/pretrained_xlsr_large
 
 # possible classes are statpool, adaptivepool, avgpool
 avg_pool_class: statpool

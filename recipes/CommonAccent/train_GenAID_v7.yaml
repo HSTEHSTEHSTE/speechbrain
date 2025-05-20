@@ -13,11 +13,11 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 # Set up folders for reading from and writing to
 # Dataset will be downloaded to the `data_folder`
 root: /home/s2526235
-data_folder: !ref <root>/AID/data/cv-corpus-17.0-2024-03-15
-csv_prepared_folder: ./CommonAccent-CV17-spk-resplit
-output_folder: ./GenAID_v7
+data_folder: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/corpora/cv17
+csv_prepared_folder: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/CommonAccent-CV17-spk-resplit
+output_folder: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp
 save_folder: !ref <output_folder>/save
-rir_folder: !ref <root>/AID/data/rir
+rir_folder: !ref <output_folder>/rir
 train_log: !ref <output_folder>/train_log.txt
 device: 'cuda:0'
 skip_prep: True
@@ -138,7 +138,7 @@ wav2vec2: !new:speechbrain.lobes.models.huggingface_wav2vec.HuggingFaceWav2Vec2
     output_norm: True
     freeze: !ref <freeze_wav2vec2>
     freeze_feature_extractor: !ref <freeze_wav2vec2_conv>
-    save_path: !ref <root>/AID/models/pretrained_xlsr_large
+    save_path: !ref <output_folder>/models/pretrained_xlsr_large
 
 # possible classes are statpool, adaptivepool, avgpool
 avg_pool_class: statpool

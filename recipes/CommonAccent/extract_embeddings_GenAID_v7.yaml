@@ -11,11 +11,11 @@ __set_seed: !apply:torch.manual_seed [!ref <seed>]
 
 # Set up folders for reading from and writing:
 root: /home/s2526235
-data_folder: !ref <root>/AccentedTTS/data/VCTK-Corpus-0.92-24kHz
-csv_prepared_folder: !ref <data_folder>
+data_folder: !ref /Data/cv-corpus-21.0-2025-03-14
+csv_prepared_folder: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/cv20-split
 
-pretrained_path: "./GenAID_v7/save/CKPT+2025-03-11+13-00-44+00"
-output_folder: !ref <data_folder>/GenAID_v7_embeddings
+pretrained_path: /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp/GenAID_v6/save/CKPT+2024-07-21+23-06-07+00
+output_folder: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/corpora/cv17/GenAID_v6_embeddings
 
 device: 'cuda:0'
 skip_prep: True
@@ -56,7 +56,7 @@ wav2vec2: !new:speechbrain.lobes.models.huggingface_wav2vec.HuggingFaceWav2Vec2
     output_norm: True
     freeze: !ref <freeze_wav2vec2>
     freeze_feature_extractor: !ref <freeze_wav2vec2_conv>
-    save_path: !ref <root>/AID/models/pretrained_xlsr_large
+    save_path: !ref /home/arts/workspace/xli/GenAID/recipes/CommonAccent/exp/models/pretrained_xlsr_large
 
 # possible classes are statpool, adaptivepool, avgpool
 avg_pool_class: statpool
