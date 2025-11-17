@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Recipe for training speaker embeddings (e.g, xvectors) using the VoxCeleb Dataset.
+"""Recipe for training speaker embeddings (e.g, xvectors) using the Fisher Dataset.
 We employ an encoder followed by a speaker classifier.
 
 To run this recipe, use the following command:
@@ -197,11 +197,11 @@ if __name__ == "__main__":
     )
     download_file(hparams["verification_file"], veri_file_path)
 
-    # Dataset prep (parsing VoxCeleb and annotation into csv files)
-    from voxceleb_prepare import prepare_voxceleb  # noqa
+    # Dataset prep (parsing Fisher and annotation into csv files)
+    from fisher_prepare import prepare_fisher  # noqa
 
     run_on_main(
-        prepare_voxceleb,
+        prepare_fisher,
         kwargs={
             "data_folder": hparams["data_folder"],
             "save_folder": hparams["save_folder"],
