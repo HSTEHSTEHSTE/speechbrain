@@ -7,17 +7,20 @@ Authors:
 
 """
 
-import logging
 import os
+import pathlib
 
 import torchaudio
 
 from speechbrain.utils.data_utils import download_file, get_all_files
+from speechbrain.utils.distributed import main_process_only
+from speechbrain.utils.logger import get_logger
 
 # Logger init
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
+@main_process_only
 def prepare_dataset_from_URL(URL, dest_folder, ext, csv_file, max_length=None):
     """Downloads a dataset containing recordings (e.g., noise sequences)
     from the provided URL and prepares the necessary CSV files for use by the noise augmenter.
@@ -51,6 +54,7 @@ def prepare_dataset_from_URL(URL, dest_folder, ext, csv_file, max_length=None):
         prepare_csv(filelist, csv_file, max_length)
 
 
+@main_process_only
 def prepare_csv(filelist, csv_file, max_length=None):
     """Iterate a set of wavs and write the corresponding csv file.
 
@@ -75,6 +79,7 @@ def prepare_csv(filelist, csv_file, max_length=None):
             os.remove(csv_file)
 
 
+@main_process_only
 def write_csv(filelist, csv_file, max_length=None):
     """
     Iterate through a list of audio files and write the corresponding CSV file.
@@ -89,7 +94,7 @@ def write_csv(filelist, csv_file, max_length=None):
         The maximum recording length in seconds.
         Recordings longer than this will be automatically cut into pieces.
     """
-    with open(csv_file, "w") as w:
+    with open(csv_file, "w", encoding="utf-8") as w:
         w.write("ID,duration,wav,wav_format,wav_opts\n")
         for i, filename in enumerate(filelist):
             _write_csv_row(w, filename, i, max_length)
@@ -176,17 +181,17 @@ def _handle_long_waveform(
         The index of the audio file in the list.
     """
     os.remove(filename)
+    filename = pathlib.Path(filename)
     for j in range(int(duration / max_length)):
         start = int(max_length * j * rate)
         stop = int(min(max_length * (j + 1), duration) * rate)
-        ext = filename.split(".")[1]
-        new_filename = filename.replace("." + ext, "_" + str(j) + "." + ext)
+        new_filename = filename.with_stem(filename.stem + f"_{j}")
 
         torchaudio.save(new_filename, signal[:, start:stop], rate)
         csv_row = (
             f"{ID}_{index}_{j}",
             str((stop - start) / rate),
-            new_filename,
+            str(new_filename),
             ext,
             "\n",
         )

@@ -220,10 +220,10 @@ class SpectrogramUpsampler(nn.Module):
     def __init__(self):
         super().__init__()
         self.conv1 = ConvTranspose2d(
-            1, 1, [3, 32], stride=[1, 16], padding=[1, 8]
+            1, 1, (3, 32), stride=(1, 16), padding=(1, 8)
         )
         self.conv2 = ConvTranspose2d(
-            1, 1, [3, 32], stride=[1, 16], padding=[1, 8]
+            1, 1, (3, 32), stride=(1, 16), padding=(1, 8)
         )
 
     def forward(self, x):
@@ -490,6 +490,22 @@ class DiffWave(nn.Module):
         x = F.relu(x)
         x = self.output_projection(x)
         return x
+
+    def diffusion_forward(
+        self,
+        x,
+        timesteps,
+        cond_emb=None,
+        length=None,
+        out_mask_value=None,  # unused for diffwave
+        latent_mask_value=None,  # unused for diffwave
+    ):
+        """Forward function suitable for wrapping by diffusion.
+        For this model, `out_mask_value`/`latent_mask_value` are unused
+        and discarded.
+        See :meth:`~DiffWave.forward` for details."""
+
+        return self(x, timesteps, spectrogram=cond_emb, length=length)
 
 
 class DiffWaveDiffusion(DenoisingDiffusion):
